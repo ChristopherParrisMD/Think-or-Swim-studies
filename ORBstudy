@@ -1,0 +1,33 @@
+# 15-Min Opening Range Support/Resistance (Current Day Only)
+input showLabels = yes;
+input orStart = 0930;
+input orEnd = 0945;
+input rthClose = 1600; # Regular session end
+
+def isRTH = SecondsFromTime(orStart) >= 0 and SecondsTillTime(rthClose) > 0;
+def isOR = SecondsFromTime(orStart) >= 0 and SecondsTillTime(orEnd) > 0 and isRTH;
+def newDay = GetDay() != GetDay()[1];
+
+# Capture OR high/low for the current day only
+def orHigh = if isOR then if !isOR[1] then high else Max(high, orHigh[1]) else if !isRTH then Double.NaN else orHigh[1];
+def orLow  = if isOR then if !isOR[1] then low  else Min(low, orLow[1])  else if !isRTH then Double.NaN else orLow[1];
+
+def ORCaptured = if !isOR and isRTH and isOR[1] then 1 else if !isRTH then 0 else ORCaptured[1];
+def todayHigh = if ORCaptured then orHigh[1] else Double.NaN;
+def todayLow  = if ORCaptured then orLow[1]  else Double.NaN;
+
+# Only plot if current day and during RTH after 15-min OR is set, but before RTH close
+plot OpeningRangeHigh = if isRTH and !isOR and !IsNaN(todayHigh) then todayHigh else Double.NaN;
+plot OpeningRangeLow = if isRTH and !isOR and !IsNaN(todayLow) then todayLow else Double.NaN;
+
+OpeningRangeHigh.SetDefaultColor(Color.RED);
+OpeningRangeHigh.SetLineWeight(2);
+OpeningRangeLow.SetDefaultColor(Color.GREEN);
+OpeningRangeLow.SetLineWeight(2);
+
+OpeningRangeHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+OpeningRangeLow.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+# Show labels only if the lines are visible
+AddLabel(showLabels and !IsNaN(OpeningRangeHigh), "15m OR High: " + Round(OpeningRangeHigh, 2), Color.RED);
+AddLabel(showLabels and !IsNaN(OpeningRangeLow), "15m OR Low: " + Round(OpeningRangeLow, 2), Color.GREEN);
